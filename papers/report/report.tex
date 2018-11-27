@@ -73,34 +73,37 @@
 \end{figure}
 
 \begin{abstract}
-\TODO{Abstract}
+In this work, we learn a game-playing agent for the game of Codenames. Codenames has a co-operative component, where an agent gives it's team clues in the form of words. We show that using a simulated Codenames environment, we are able to train a single-round playing agent using supervised learning and obtain a TODO result in a human evaluation and against a baseline implementation. We improve on this by TODO\% by training a reinforcement learning agent that plays multiple rounds and improves via self-play.
 \end{abstract}
-
-Deep Reinforcement Learning has been the driving force behind several achievements in game-playing agents over the past few years. Notable examples are AlphaGo \cite{alphago}, AlphaGo Zero \cite{alphagozero}, AlphaZero \cite{alphazero}, Capture The Flag \cite{ctf}, and many others. In this project, we aim to extend the idea behind AlphaZero to train AI agents to play the game of Codenames\footnote{\url{https://boardgamegeek.com/boardgame/178900/codenames}}.
-
-Codenames is a multiplayer card game originally designed for four agents: two teams (red, blue) with two agents --- a ``spymaster'' and ``guesser''. The game board is a $5 \times 5$ grid of nouns, each word belonging to one of four groups: red team, blue team, neutral, and an assassin. The teams alternate with taking turns: a spymaster gives a ``clue'' (single word that is not contained in the words on the board and a number designating the number of words associated with the clue). The team of the spymaster then goes on to iteratively guess words on the board. If they guessed a card of their team, they get another turn (with a maximum number of turns given by the clue word number + 1). If they guess a neutral card or a card of the other team, their turn ends. Guessing an assassin card makes the team lose immediately. This constitutes one round of the game.
-
-We model the game in the following. We assume a fixed vocabulary $V_B$ for the words on the board\footnote{From: \url{https://github.com/jbowens/codenames/}}, and a different (larger, more variant) fixed vocabulary $V_C$ for giving/receiving clues by the agents\footnote{\url{https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md}} \cite{fasttext}. We assume $V_B \subseteq V_C$. For practical purposes, we only train the two agents for the red team, and let them play one round per training step, because Codenames is easier to evaluate than e.g.~chess on a turn by turn basis (guessing a word of your team gives positive rewards, otherwise you get a negative reward).
-
-Our proof of concept implementation in PyTorch will be made available, and the API will enable the creation of bots to play a game of humans vs.~bots, bots vs.~bots, or humans with bots, with pretrained or custom weights. We expect the game to train faster than AlphaZero, since our rounds are shorter and the rewards are more expressive.
-
-To evaluate our trained agents, we propose the following experiments. First, we compare our agents to a baseline that optimizes a custom loss function in a pretrained word embedding space to find clues, and looks for nearest neighbors in the same space for guessing. Secondly, we compare our spymaster to the implementation of a spymaster by \cite{codenamesai}. Optionally, we play a round of games using a human control group: both human vs.~bot games and mixed human-bot games.
-
-To summarize, our contributions will be the following:
-\begin{enumerate}
-    \item Design and implement deep RL agents in PyTorch that learn to play Codenames by self-play.
-    \item Implement a simple game interface to play Codenames against/with trained agents.
-    \item Evaluate the performance of our agents in several diverse experiments, optionally followed by a short ablation study.
-\end{enumerate}
-
-
-
-
 
 %%%%%%
 \section{Introduction}
 
-\TODO{Describe your problem and state your contributions.}
+Deep Reinforcement Learning (Deep RL) has been the driving force behind several achievements in game-playing agents over the past few years. Notable examples are AlphaGo\cite{alphago}, AlphaGo Zero\cite{alphagozero}, AlphaZero\cite{alphazero}, Capture The Flag\cite{ctf}, and many others. In this work, we aim to extend the idea behind AlphaZero to train RL agents to play the game of Codenames\footnote{\url{https://boardgamegeek.com/boardgame/178900/codenames}}.
+
+Codenames is a multiplayer card game originally designed for four agents: two teams (red, blue) with two agents --- a ``spymaster'' and ``guesser''. The game board is a $5 \times 5$ grid of nouns, each word belonging to one of four groups: red team, blue team, neutral, and an assassin. The teams alternate with taking turns: a spymaster gives a ``clue'' (single word that is not contained in the words on the board and a number designating the number of words associated with the clue). The team of the spymaster then goes on to iteratively guess words on the board. If they guessed a card of their team, they get another turn (with a maximum number of turns given by the clue word number + 1). If they guess a neutral card or a card of the other team, their turn ends. Guessing an assassin card makes the team lose immediately. This constitutes one round of the game.
+
+We model the game in the following. We assume a fixed vocabulary $V_B$ for the words on the board\footnote{From: \url{https://github.com/jbowens/codenames/}}, and a different (larger, more variant) fixed vocabulary $V_C$ for giving/receiving clues by the agents\footnote{\url{https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md}} \cite{fasttext}. We assume $V_B \subseteq V_C$.
+
+As a first approach, we only train the two agents for the red team, and let them play one round per training step in a supervised fashion, because Codenames is easier to evaluate than e.g.~chess on a turn by turn basis (guessing a word of your team gives positive rewards, otherwise you get a negative reward).
+
+Extending on that, we let the agents play a full $5 \times 5$ game against each other using an approach similar to AlphaZero\cite{alphazero}.
+
+Our proof of concept implementation in PyTorch will be made available, and the API will enable the creation of bots to play a game of humans vs.~bots, bots vs.~bots, or humans with bots, with pretrained or custom weights.
+
+To evaluate our trained agents, we propose the following experiments. First, we compare our agents to a baseline that optimizes a custom loss function in a pretrained word embedding space to find clues, and looks for nearest neighbors in the same space for guessing.
+
+Secondly, we compare our spymasters to the implementation of a spymaster by \cite{codenamesai}.
+
+Finally, we play a round of games using a human control group: both human vs.~bot games and mixed human-bot games.
+
+To summarize, our contributions will be the following:
+\begin{enumerate}
+    \item Design and implement agents in PyTorch that learn to play Codenames in a supervised and self-play fashion.
+    \item Implement simplistic game interface to play Codenames against/with trained agents.
+    \item Evaluate the performance of our agents in several diverse experiments, followed by a short deep-dive into the way our agents give clues and guess.
+\end{enumerate}
+
 
 
 
@@ -112,13 +115,61 @@ To summarize, our contributions will be the following:
 
 \TODO{Describe your idea and how it was implemented to solve the problem. Survey the related work, giving credit where credit is due.}
 
+\subsection{Environment}
+
+\TODO{Describe the environment, why we used fixed pre-trained word embeddings, which ones, etc}
+
+\subsection{Baseline agent}
+
+\TODO{Describe the baseline agent and how it is implemented}
+
+\subsection{3rd party spymaster agent}
+
+\TODO{Describe the 3rd party spymaster and how it is implemented.. and which guesser we pair it with}
+
+\subsection{Single-round supervised agent}\label{sec:single}
+
+\TODO{Describe our single-round supervised agent -- the architecture, etc}
+
+\subsection{Multi-round reinforced agent}\label{sec:multi}
+
+\TODO{Describe our multi-round RL agent -- the architecture (ideally same as single), how self-play here works, for how long, etc}
+
+
+
+
 
 
 
 
 \section{Results}
 
-\TODO{Show evidence to support your claims made in the introduction. Compare to baselines / existing work.}
+\begin{table}
+\centering
+\begin{tabular}{rrrrrr}
+\toprule
+ & Baseline & 3party & Single & Multi & Human\\ 
+\midrule 
+Baseline & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ \\ 
+3party & & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ \\ 
+Single & & & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ \\ 
+Multi  & & & & $0.5 \pm 0.000$ & $0.5 \pm 0.000$ \\ 
+Human  & & & & & $0.5 \pm 0.000$ \\ 
+\bottomrule
+\end{tabular}
+\vspace{0.2cm}
+\caption{Trained agent result table. Each artificial agent was trained 3 times and evaluated on a 50 games against all three version of the opposing agent (i.e.~each pair played a total of 450 games). For the human agents, they played 3 games against each of the versions of the bots, making for a total of 9 games against each agent.}\label{tab:eval}
+\end{table}
+
+\TODO{Describe the exact experiment setup (number of games, etc)}
+
+\TODO{Interpret the results in Table~\ref{tab:eval}}
+
+\subsection{Clue-giving and guessing in depth}
+
+In this section we take a deeper look at the way our best model, the multi-round RL agent (Section~\ref{sec:multi}) gives clues and takes guesses.
+
+\TODO{Make some observations by looking at the games and visualizing distances in the pre-trained word embedding space?}
 
 
 
@@ -126,9 +177,9 @@ To summarize, our contributions will be the following:
 
 
 
-\section{Discussion}
+\section{Discussion and Related Work}
 
-\TODO{Discuss the strengths and weaknesses of your approach, based on the results. Point out the implications of your novel idea on the application concerned.}
+\TODO{Discuss the strengths and weaknesses of your approach, based on the results. Point out the implications of your novel idea on the application concerned. Compare with previous work in this space, and in related work in different areas.}
 
 
 
@@ -139,7 +190,24 @@ To summarize, our contributions will be the following:
 
 \section{Summary}
 
-\TODO{Summarize your contributions in light of the new results.}
+\TODO{Summarize your contributions in light of the new results. Just a few short sentences.}
+
+
+
+
+
+
+
+\section{Things to keep in mind (proposal feedback) \TODO{delete me}}
+
+\begin{itemize}
+\item As you say yourself, you can actually train single rounds of the game. The point of RL is usually that there is a set of sequential decisions to be made with a reward only at the very end. If all rounds are independent, the problem reduces to supervised learning. So I suggest you first train a single-round AI by supervised training and then use this as your baseline. If you find that doing RL on the entire sequence of rounds does not improve this baseline, I suggest you somehow extend the rules of the game, such that the rounds are no longer independent. If however the RL agent performs better, investigate how it does so.
+
+\item It's easy for such a system to degenerate and "invent its own language", i.e. just use the hint words as atoms in a compression algorithm. Humans play this game by using semantic knowledge about the words in play, and you'll probably not create a semantically smart AI. You have to show that what the AI learns is somehow sensible. To learn over the space of pre-trained word embeddings is a good first step to make sure that happens.
+
+\item In general, pay special attention to not just making the best AI, but to show what it learned and how that manifests in its actions.
+\end{itemize}
+
 
 \bibliographystyle{unsrt}
 \bibliography{references}
