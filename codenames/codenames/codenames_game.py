@@ -1,12 +1,10 @@
-from __future__ import print_function
-import sys
-sys.path.append('..')
-from Game import Game
-from .OthelloLogic import Board
+from .codenames_logic import Board
+from codenames.game import Game
+
 import numpy as np
 
 
-class OthelloGame(Game):
+class CodenamesGame(Game):
 
     def __init__(self, n):
         self.n = n
@@ -69,7 +67,7 @@ class OthelloGame(Game):
         # mirror, rotational
         assert (len(pi) == self.n**2 + 1)  # 1 for pass
         pi_board = np.reshape(pi[:-1], (self.n, self.n))
-        l = []
+        lst = []
 
         for i in range(1, 5):
             for j in [True, False]:
@@ -78,8 +76,8 @@ class OthelloGame(Game):
                 if j:
                     newB = np.fliplr(newB)
                     newPi = np.fliplr(newPi)
-                l += [(newB, list(newPi.ravel()) + [pi[-1]])]
-        return l
+                lst += [(newB, list(newPi.ravel()) + [pi[-1]])]
+        return lst
 
     def stringRepresentation(self, board):
         # 8x8 numpy array (canonical board)
@@ -102,8 +100,10 @@ def display(board):
         print(y, "|", end="")  # print the row #
         for x in range(n):
             piece = board[y][x]  # get the piece to print
-            if piece == -1: print("b ", end="")
-            elif piece == 1: print("W ", end="")
+            if piece == -1:
+                print("b ", end="")
+            elif piece == 1:
+                print("W ", end="")
             else:
                 if x == n:
                     print("-", end="")

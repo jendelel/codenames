@@ -1,7 +1,7 @@
-from Coach import Coach
-from codenames.CodenamesGame import CodenamesGame
-from codenames.NNet import NNetWrapper as nn
-from utils import *
+from .coach import Coach
+from .codenames.codenames_game import CodenamesGame
+from .codenames.nnet import NNetWrapper as nn
+from .utils import dotdict
 
 args = dotdict({
     'numIters': 1000,

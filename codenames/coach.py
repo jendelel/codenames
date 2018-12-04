@@ -1,9 +1,12 @@
+from .arena import Arena
+from .mcts import MCTS
+from resources.pytorch_classification.utils import Bar, AverageMeter
+
 from collections import deque
-from Arena import Arena
-from MCTS import MCTS
 import numpy as np
-from pytorch_classification.utils import Bar, AverageMeter
-import time, os, sys
+import time
+import os
+import sys
 from pickle import Pickler, Unpickler
 from random import shuffle
 

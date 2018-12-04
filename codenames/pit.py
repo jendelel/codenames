@@ -1,15 +1,18 @@
-import Arena
-from MCTS import MCTS
-from codenames.CodenamesGame import CodenamesGame, display
-from codenames.CodenamesPlayers import *
-from codenames.NNet import NNetWrapper as NNet
-
-import numpy as np
-from utils import *
 """
-use this script to play any two agents against each other, or play manually with
+Use this script to play any two agents against each other, or play manually with
 any agent.
 """
+from .arena import Arena
+from .mcts import MCTS
+from .utils import dotdict
+
+from codenames.codenames_game import CodenamesGame, display
+from codenames.codenames_players import GreedyCodenamesPlayer
+from codenames.codenames_players import HumanCodenamesPlayer
+from codenames.codenames_players import RandomCodenamesPlayer
+from codenames.nnet import NNetWrapper as NNet
+
+import numpy as np
 
 g = CodenamesGame(6)
 
@@ -23,7 +26,11 @@ n1 = NNet(g)
 n1.load_checkpoint('./pretrained_models/codenames/', '6x100x25_best.pth.tar')
 args1 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
 mcts1 = MCTS(g, n1, args1)
-n1p = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
 
-arena = Arena.Arena(n1p, hp, g, display=display)
+
+def n1p(x):
+    return np.argmax(mcts1.getActionProb(x, temp=0))
+
+
+arena = Arena(n1p, hp, g, display=display)
 print(arena.playGames(2, verbose=True))

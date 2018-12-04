@@ -1,25 +1,17 @@
-import argparse
-import os
-import shutil
-import time
-import random
-import numpy as np
-import math
-import sys
-sys.path.append('../')
-from utils import *
+from .codenames_nnet import CodenamesNNet as net
+from .NeuralNet import NeuralNet
 from pytorch_classification.utils import Bar, AverageMeter
-from NeuralNet import NeuralNet
+from utils import dotdict
 
-import argparse
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
 from torch.autograd import Variable
 
-from .CodenamesNNet import CodenamesNNet as net
+import os
+import time
+import numpy as np
+import sys
+sys.path.append('../')
 
 args = dotdict({
     'lr': 0.001,
@@ -96,16 +88,18 @@ class NNetWrapper(NeuralNet):
                 batch_idx += 1
 
                 # plot progress
-                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
-                    batch=batch_idx,
-                    size=int(len(examples) / args.batch_size),
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    lpi=pi_losses.avg,
-                    lv=v_losses.avg,
-                )
+                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f}' \
+                    + '| Loss_v: {lv:.3f}'.format(
+
+                        batch=batch_idx,
+                        size=int(len(examples) / args.batch_size),
+                        data=data_time.avg,
+                        bt=batch_time.avg,
+                        total=bar.elapsed_td,
+                        eta=bar.eta_td,
+                        lpi=pi_losses.avg,
+                        lv=v_losses.avg,
+                    )
                 bar.next()
             bar.finish()
 
@@ -118,14 +112,15 @@ class NNetWrapper(NeuralNet):
 
         # preparing input
         board = torch.FloatTensor(board.astype(np.float64))
-        if args.cuda: board = board.contiguous().cuda()
+        if args.cuda:
+            board = board.contiguous().cuda()
         board = Variable(board, volatile=True)
         board = board.view(1, self.board_x, self.board_y)
 
         self.nnet.eval()
         pi, v = self.nnet(board)
 
-        #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time() - start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):

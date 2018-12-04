@@ -6,7 +6,7 @@ class Game():
 
     Use 1 for player1 and -1 for player2.
 
-    See othello/OthelloGame.py for an example implementation.
+    See codenames/CodenamesGame.py for an example implementation.
     """
 
     def __init__(self):
@@ -69,7 +69,7 @@ class Game():
         Returns:
             r: 0 if game has not ended. 1 if player won, -1 if player lost,
                small non-zero value for draw.
-               
+
         """
         pass
 
