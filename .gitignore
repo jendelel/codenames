@@ -1,3 +1,11 @@
 __pycache__/
 *.bin
 .ipynb_checkpoints/
+*.blg
+*.out
+*.synctex.gz
+*.pdf
+*.bbl
+*.aux
+*.log
+codenames/data_out/
