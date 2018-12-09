@@ -1,114 +1,122 @@
-from .codenames_logic import Board
+from .codenames_logic import CodenamesBoard
 from codenames.game import Game
-
-import numpy as np
 
 
 class CodenamesGame(Game):
 
-    def __init__(self, n):
-        self.n = n
+    def __init__(self, num_blue, num_red, num_assassin=0, num_neutral=0):
 
-    def getInitBoard(self):
-        # return initial board (numpy board)
-        b = Board(self.n)
-        return np.array(b.pieces)
+        super(CodenamesGame, self).__init__()
+        self.num_blue = num_blue
+        self.num_red = num_red
+        self.num_assassin = num_assassin
+        self.num_neutral = num_neutral
+        self.clue_vocab_size = 0
 
-    def getBoardSize(self):
-        # (a,b) tuple
-        return (self.n, self.n)
+    def get_init_board(self):
 
-    def getActionSize(self):
-        # return number of actions
-        return self.n * self.n + 1
+        """ Gets the initial game word ie words belonging to different categories"""
 
-    def getNextState(self, board, player, action):
-        # if player takes action on board, return next (board,player)
-        # action must be a valid move
-        if action == self.n * self.n:
-            return (board, -player)
-        b = Board(self.n)
-        b.pieces = np.copy(board)
-        move = (int(action / self.n), action % self.n)
-        b.execute_move(move, player)
-        return (b.pieces, -player)
+        board = CodenamesBoard(num_blue=self.num_blue, num_red=self.num_red,
+                               num_assassin=self.num_assassin, num_neutral=self.num_neutral)
 
-    def getValidMoves(self, board, player):
-        # return a fixed size binary vector
-        valids = [0] * self.getActionSize()
-        b = Board(self.n)
-        b.pieces = np.copy(board)
-        legalMoves = b.get_legal_moves(player)
-        if len(legalMoves) == 0:
-            valids[-1] = 1
-            return np.array(valids)
-        for x, y in legalMoves:
-            valids[self.n * x + y] = 1
-        return np.array(valids)
+        board.reset()
+        self.clue_vocab_size = len(board.allowed_clue_words)
 
-    def getGameEnded(self, board, player):
-        # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
-        # player = 1
-        b = Board(self.n)
-        b.pieces = np.copy(board)
-        if b.has_legal_moves(player):
-            return 0
-        if b.has_legal_moves(-player):
-            return 0
-        if b.countDiff(player) > 0:
+        # TODO: board.pieces returns the words. Add an embeddings return either in the word, or the
+
+        return board.pieces
+
+    def get_board_size(self):
+
+        """ Returns the number of words """
+
+        return self.num_blue + self.num_red + self.num_assassin + self.num_neutral
+
+    def get_action_size(self):
+
+        """ Returns the possible number of guesses that can be made"""
+
+        # For each clue word, you can associate it to 1 word, 2 words and so on
+        # associate each clue word with a possible power set
+
+        blue_actions = self.clue_vocab_size * (2 ** self.num_blue)
+        red_actions = self.clue_vocab_size * (2 ** self.num_red)
+
+        # TODO: Do you add for assassins and neutral, since you're not looking to guess them
+
+        return blue_actions + red_actions
+
+    def get_next_state(self, board, team, action, is_last_guess=False):
+
+        """ Given a board state, team and action, get the next board state and team"""
+
+        # Action is a single guess
+
+        assert(isinstance(board, CodenamesBoard))
+
+        turn_complete = board.guess(team=team, guessed_word=action, is_last_guess=is_last_guess)
+
+        # TODO: pieces gives out words, need to change them to embeddings
+
+        if turn_complete:
+            return board.pieces, -team
+
+        else:
+            return board.pieces, team
+
+    def get_valid_moves(self, board, team):
+
+        """ Get valid moves for given board state """
+
+        valids = [0] * self.get_action_size()
+        blue_actions = self.clue_vocab_size * (2 ** self.num_blue)
+
+        if team == 1:
+            valids[:blue_actions] = 1
+
+        elif team == -1:
+            valids[blue_actions:] = 1
+
+        return valids
+
+    def get_game_ended(self, board, team):
+
+        """ Returns 0 if game not ended, 1 if team wins and -1 if -team wins"""
+
+        assert isinstance(board, CodenamesBoard)
+
+        assassin_word = board.assassin
+
+        # Game over if last guess was assassin
+        if board.last_guess[team] == assassin_word:
+            return -1
+
+        elif board.last_guess[-team] == assassin_word:
             return 1
-        return -1
 
-    def getCanonicalForm(self, board, player):
-        # return state if player==1, else return -state if player==-1
-        return player * board
+        # Game over if one team guesses all before others
+        elif not board.has_words(team) and board.has_words(-team) > 0:
+            return 1
 
-    def getSymmetries(self, board, pi):
-        # mirror, rotational
-        assert (len(pi) == self.n**2 + 1)  # 1 for pass
-        pi_board = np.reshape(pi[:-1], (self.n, self.n))
-        lst = []
+        elif not board.has_words(-team) and board.has_words(team) > 0:
+            return -1
 
-        for i in range(1, 5):
-            for j in [True, False]:
-                newB = np.rot90(board, i)
-                newPi = np.rot90(pi_board, i)
-                if j:
-                    newB = np.fliplr(newB)
-                    newPi = np.fliplr(newPi)
-                lst += [(newB, list(newPi.ravel()) + [pi[-1]])]
-        return lst
+        # Guesses left
+        else:
+            return 0
 
-    def stringRepresentation(self, board):
-        # 8x8 numpy array (canonical board)
-        return board.tostring()
+    @staticmethod
+    def get_score(board, team):
 
-    def getScore(self, board, player):
-        b = Board(self.n)
-        b.pieces = np.copy(board)
-        return b.countDiff(player)
+        if team == 1:
+            return len(board.blue_guessed)
 
+        elif team == -1:
+            return len(board.red_guessed)
 
-def display(board):
-    n = board.shape[0]
+    def string_representation(self, board):
+        pass
 
-    for y in range(n):
-        print(y, "|", end="")
-    print("")
-    print(" -----------------------")
-    for y in range(n):
-        print(y, "|", end="")  # print the row #
-        for x in range(n):
-            piece = board[y][x]  # get the piece to print
-            if piece == -1:
-                print("b ", end="")
-            elif piece == 1:
-                print("W ", end="")
-            else:
-                if x == n:
-                    print("-", end="")
-                else:
-                    print("- ", end="")
-        print("|")
-
-    print("   -----------------------")
+    def get_symmetries(self, board, pi):
+        pass
