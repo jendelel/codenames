@@ -12,7 +12,157 @@ x is the column, y is the row.
 '''
 
 
-class Board():
+class CodenamesBoard:
+
+    def __init__(self, num_blue, num_red, num_assassin=0, num_neutral=0):
+
+        self.num_blue = num_blue
+        self.num_red = num_red
+        self.num_assassin = num_assassin
+        self.num_neutral = num_neutral
+
+        self._generate_dicts()
+
+    def _generate_dicts(self):
+
+        """ Generate the vocab to index and index to vocab dict"""
+
+        self.vocab = set()
+
+        pass
+
+    def _sample_words_from_vocab(self):
+
+        """ Samples words from the vocabulary"""
+
+        self.blue = set()
+        self.red = set()
+        self.assassin = set()
+        self.neutral = set()
+
+        # Also get indices with respect to vocabulary
+
+        self.board_indices = list()
+        self.allowed_clue_words = self.vocab - (self.blue.union(self.red, self.assassin, self.neutral))
+
+    def _init_guessed_words(self):
+
+        """ Initializes guessed_XXX (XXX = {blue, red, assassin, neutral}) to empty"""
+
+        self.blue_guessed = set()
+        self.red_guessed = set()
+        self.neutral_guessed = set()
+
+    def _init_last_guess(self):
+
+        """ Initialize last_guess """
+
+        # Last_guess keeps track of most recent guesses by both teams
+        # Used for checking game ended condition in case an assassin was guessed
+
+        self.last_guess = {1: '', -1: ''}
+
+    def reset(self):
+
+        """ Generates the starting board """
+
+        self._sample_words_from_vocab()
+        self._init_guessed_words()
+        self._init_last_guess()
+
+    @property
+    def word_sets(self):
+        yield self.blue
+        yield self.red
+        yield self.assassin
+        yield self.neutral
+
+    # TODO: Property pieces: returns the words; return embeddings?
+
+    @property
+    def pieces(self):
+        for word_set in self.word_sets:
+            for word in word_set:
+                yield word
+
+    @pieces.setter
+    def pieces(self, board):
+
+        self.blue = board.blue
+        self.red = board.red
+        self.assassin = board.assassin
+        self.neutral = board.neutral
+
+    def guess(self, team, guessed_word, is_last_guess=False):
+
+        """ Changes the board state after a word was guessed"""
+
+        self.last_guess[team] = guessed_word
+        turn_complete = False
+
+        # Word guessed correctly, update the board state
+        # check if this is the last guess
+        if team == 1 and guessed_word in self.blue:
+
+            self.blue.remove(guessed_word)
+            self.blue_guessed.update(guessed_word)
+
+            if is_last_guess:
+                turn_complete = True
+
+            return turn_complete
+
+        if team == -1 and guessed_word in self.red:
+
+            self.red.remove(guessed_word)
+            self.red_guessed.update(guessed_word)
+
+            if is_last_guess:
+                turn_complete = True
+
+            return turn_complete
+
+        # Word guessed incorrectly, update state and change turn
+        if team == 1 and guessed_word not in self.blue:
+            turn_complete = True
+
+            if guessed_word in self.red:
+                self.red.remove(guessed_word)
+                self.red_guessed.update(guessed_word)
+
+            elif guessed_word in self.neutral:
+                self.neutral.remove(guessed_word)
+                self.neutral_guessed.update(guessed_word)
+
+            # TODO: Add an extra for assassin
+
+            return turn_complete
+
+        if team == -1 and guessed_word not in self.red:
+            turn_complete = True
+
+            if guessed_word in self.red:
+                self.blue.remove(guessed_word)
+                self.blue_guessed.update(guessed_word)
+
+            elif guessed_word in self.neutral:
+                self.neutral.remove(guessed_word)
+                self.neutral_guessed.update(guessed_word)
+
+            return turn_complete
+
+    def has_words(self, team):
+
+        """ Keeps count of how many words are remaining for each team"""
+
+        if team == 1:
+            return len(self.blue)
+
+        elif team == -1:
+            return len(self.red)
+
+
+class Board:
 
     # list of all 8 directions on the board, as (x,y) offsets
     __directions = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)]
@@ -36,7 +186,7 @@ class Board():
     def __getitem__(self, index):
         return self.pieces[index]
 
-    def countDiff(self, color):
+    def count_diff(self, color):
         """Counts the # pieces of the given color
         (1 for white, -1 for black, 0 for empty spaces)"""
         count = 0
@@ -58,16 +208,16 @@ class Board():
         for y in range(self.n):
             for x in range(self.n):
                 if self[x][y] == color:
-                    newmoves = self.get_moves_for_square((x, y))
-                    moves.update(newmoves)
+                    new_moves = self.get_moves_for_square((x, y))
+                    moves.update(new_moves)
         return list(moves)
 
     def has_legal_moves(self, color):
         for y in range(self.n):
             for x in range(self.n):
                 if self[x][y] == color:
-                    newmoves = self.get_moves_for_square((x, y))
-                    if len(newmoves) > 0:
+                    new_moves = self.get_moves_for_square((x, y))
+                    if len(new_moves) > 0:
                         return True
         return False
 
@@ -125,7 +275,7 @@ class Board():
             if self[x][y] == 0:
                 if flips:
                     # print("Found", x,y)
-                    return (x, y)
+                    return x, y
                 else:
                     return None
             elif self[x][y] == color:
