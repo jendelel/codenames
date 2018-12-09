@@ -4,18 +4,18 @@ from .codenames.nnet import NNetWrapper as nn
 from .utils import dotdict
 
 args = dotdict({
-    'numIters': 1000,
-    'numEps': 100,
-    'tempThreshold': 15,
-    'updateThreshold': 0.6,
-    'maxlenOfQueue': 200000,
-    'numMCTSSims': 25,
-    'arenaCompare': 40,
-    'cpuct': 1,
+    'num_iters': 1000,
+    'num_episodes': 100,
+    'temp_threshold': 15,
+    'update_threshold': 0.6,
+    'queue_max_len': 200000,
+    'num_mcts': 25,  # Number of MCTS simulations
+    'arena_compare': 40,
+    'cpuct': 1,  # ?
     'checkpoint': './data_out/',
     'load_model': False,
     'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
+    'num_iters_for_train_examples_history': 20,
 })
 
 if __name__ == "__main__":
@@ -28,5 +28,5 @@ if __name__ == "__main__":
     c = Coach(g, nnet, args)
     if args.load_model:
         print("Load trainExamples from file")
-        c.loadTrainExamples()
+        c.load_train_examples()
     c.learn()

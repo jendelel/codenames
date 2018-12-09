@@ -1,10 +1,10 @@
-class Game():
+class Game:
     """
     This class specifies the base Game class. To define your own game, subclass
     this class and implement the functions below. This works when the game is
-    two-player, adversarial and turn-based.
+    two-team, adversarial and turn-based.
 
-    Use 1 for player1 and -1 for player2.
+    Use 1 for team1 and -1 for team2.
 
     See codenames/CodenamesGame.py for an example implementation.
     """
@@ -12,7 +12,7 @@ class Game():
     def __init__(self):
         pass
 
-    def getInitBoard(self):
+    def get_init_board(self):
         """
         Returns:
             startBoard: a representation of the board (ideally this is the form
@@ -20,76 +20,76 @@ class Game():
         """
         pass
 
-    def getBoardSize(self):
+    def get_board_size(self):
         """
         Returns:
             (x,y): a tuple of board dimensions
         """
         pass
 
-    def getActionSize(self):
+    def get_action_size(self):
         """
         Returns:
             actionSize: number of all possible actions
         """
         pass
 
-    def getNextState(self, board, player, action):
+    def get_next_state(self, board, team, action, is_last_guess=False):
         """
         Input:
             board: current board
-            player: current player (1 or -1)
-            action: action taken by current player
+            team: current team (1 or -1)
+            action: action taken by current team
 
         Returns:
             nextBoard: board after applying action
-            nextPlayer: player who plays in the next turn (should be -player)
+            nextPlayer: team who plays in the next turn (should be -team)
         """
         pass
 
-    def getValidMoves(self, board, player):
+    def get_valid_moves(self, board, team):
         """
         Input:
             board: current board
-            player: current player
+            team: current team
 
         Returns:
             validMoves: a binary vector of length self.getActionSize(), 1 for
-                        moves that are valid from the current board and player,
+                        moves that are valid from the current board and team,
                         0 for invalid moves
         """
         pass
 
-    def getGameEnded(self, board, player):
+    def get_game_ended(self, board, team):
         """
         Input:
             board: current board
-            player: current player (1 or -1)
+            team: current team (1 or -1)
 
         Returns:
-            r: 0 if game has not ended. 1 if player won, -1 if player lost,
+            r: 0 if game has not ended. 1 if team won, -1 if team lost,
                small non-zero value for draw.
 
         """
         pass
 
-    def getCanonicalForm(self, board, player):
+    def get_canonical_form(self, board, team):
         """
         Input:
             board: current board
-            player: current player (1 or -1)
+            team: current team (1 or -1)
 
         Returns:
             canonicalBoard: returns canonical form of board. The canonical form
-                            should be independent of player. For e.g. in chess,
+                            should be independent of team. For e.g. in chess,
                             the canonical form can be chosen to be from the pov
-                            of white. When the player is white, we can return
-                            board as is. When the player is black, we can invert
+                            of white. When the team is white, we can return
+                            board as is. When the team is black, we can invert
                             the colors and return the board.
         """
         pass
 
-    def getSymmetries(self, board, pi):
+    def get_symmetries(self, board, pi):
         """
         Input:
             board: current board
@@ -102,7 +102,7 @@ class Game():
         """
         pass
 
-    def stringRepresentation(self, board):
+    def string_representation(self, board):
         """
         Input:
             board: current board
