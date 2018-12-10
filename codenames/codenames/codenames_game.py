@@ -12,6 +12,7 @@ class CodenamesGame(Game):
         self.num_assassin = num_assassin
         self.num_neutral = num_neutral
         self.clue_vocab_size = 0
+        self.powerset_indices = None
 
     def get_init_board(self):
 
@@ -22,8 +23,9 @@ class CodenamesGame(Game):
 
         board.reset()
         self.clue_vocab_size = len(board.allowed_clue_words)
+        self.powerset_indices = board.powerset_indices
 
-        # TODO: board.pieces returns the words. Add an embeddings return either in the word, or the
+        # TODO: board.pieces returns the words. Add an embeddings return?
 
         return board.pieces
 
@@ -40,10 +42,10 @@ class CodenamesGame(Game):
         # For each clue word, you can associate it to 1 word, 2 words and so on
         # associate each clue word with a possible power set
 
-        blue_actions = self.clue_vocab_size * (2 ** self.num_blue)
-        red_actions = self.clue_vocab_size * (2 ** self.num_red)
+        blue_actions = self.clue_vocab_size * (2 ** self.num_blue - 1)
+        red_actions = self.clue_vocab_size * (2 ** self.num_red - 1)
 
-        # TODO: Do you add for assassins and neutral, since you're not looking to guess them
+        # TODO: Do you add for assassins and neutral, since you're not looking to guess them?
 
         return blue_actions + red_actions
 
@@ -54,10 +56,9 @@ class CodenamesGame(Game):
         # Action is a single guess
 
         assert(isinstance(board, CodenamesBoard))
-
         turn_complete = board.guess(team=team, guessed_word=action, is_last_guess=is_last_guess)
 
-        # TODO: pieces gives out words, need to change them to embeddings
+        # TODO: pieces gives out words, need to change them to embeddings?
 
         if turn_complete:
             return board.pieces, -team
@@ -70,13 +71,17 @@ class CodenamesGame(Game):
         """ Get valid moves for given board state """
 
         valids = [0] * self.get_action_size()
-        blue_actions = self.clue_vocab_size * (2 ** self.num_blue)
 
-        if team == 1:
-            valids[:blue_actions] = 1
+        assert isinstance(board, CodenamesBoard)
 
-        elif team == -1:
-            valids[blue_actions:] = 1
+        # Indices associated with the powerset
+        indices = board.get_powerset_indices(team=team)
+
+        for i in range(self.clue_vocab_size):
+
+            # Powerset repeated for each clue word, need to update indices accordingly
+            indices_to_add = indices + i * (len(self.powerset_indices))
+            valids[indices_to_add] = 1
 
         return valids
 
@@ -109,6 +114,8 @@ class CodenamesGame(Game):
     @staticmethod
     def get_score(board, team):
 
+        """ Returns the number of words guessed for given team"""
+
         if team == 1:
             return len(board.blue_guessed)
 
@@ -119,4 +126,7 @@ class CodenamesGame(Game):
         pass
 
     def get_symmetries(self, board, pi):
+        pass
+
+    def get_canonical_form(self, board, team):
         pass
