@@ -1,5 +1,6 @@
-from .codenames_logic import CodenamesBoard
+from codenames.codenames.codenames_logic import CodenamesBoard
 from codenames.game import Game
+import numpy as np
 
 
 class CodenamesGame(Game):
@@ -12,7 +13,6 @@ class CodenamesGame(Game):
         self.num_assassin = num_assassin
         self.num_neutral = num_neutral
         self.clue_vocab_size = 0
-        self.powerset_indices = None
 
     def get_init_board(self):
 
@@ -23,11 +23,16 @@ class CodenamesGame(Game):
 
         board.reset()
         self.clue_vocab_size = len(board.allowed_clue_words)
-        self.powerset_indices = board.powerset_indices
+        self._powerset(board=board)
 
         # TODO: board.pieces returns the words. Add an embeddings return?
 
         return board.pieces
+
+    def _powerset(self, board):
+
+        self.powerset_to_index = board.powerset_indices
+        self.index_to_powerset = {i: subset for subset, i in self.powerset_to_index.items()}
 
     def get_board_size(self):
 
@@ -70,7 +75,7 @@ class CodenamesGame(Game):
 
         """ Get valid moves for given board state """
 
-        valids = [0] * self.get_action_size()
+        valids = np.array([0] * self.get_action_size())
 
         assert isinstance(board, CodenamesBoard)
 
@@ -80,7 +85,8 @@ class CodenamesGame(Game):
         for i in range(self.clue_vocab_size):
 
             # Powerset repeated for each clue word, need to update indices accordingly
-            indices_to_add = indices + i * (len(self.powerset_indices))
+            indices_to_add = indices + i * (len(self.powerset_to_indices))
+            indices_to_add = np.array(indices_to_add)
             valids[indices_to_add] = 1
 
         return valids
@@ -130,3 +136,7 @@ class CodenamesGame(Game):
 
     def get_canonical_form(self, board, team):
         pass
+
+def display(board):
+
+    pass
