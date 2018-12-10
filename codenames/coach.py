@@ -1,5 +1,5 @@
-from .arena import Arena
-from .mcts import MCTS
+from codenames.arena import Arena
+from codenames.mcts import MCTS
 from resources.pytorch_classification.utils import Bar, AverageMeter
 
 from collections import deque
