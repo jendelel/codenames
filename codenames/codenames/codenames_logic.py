@@ -11,6 +11,9 @@ Squares are stored and manipulated as (x,y) tuples.
 x is the column, y is the row.
 '''
 
+from itertools import chain, combinations
+import numpy as np
+
 
 class CodenamesBoard:
 
@@ -31,18 +34,34 @@ class CodenamesBoard:
 
         pass
 
-    def _sample_words_from_vocab(self):
+    @staticmethod
+    def powerset(words):
+        s = list(words)
+        return list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
+
+    def _prepare_wordsets(self):
 
         """ Samples words from the vocabulary"""
+
+        # TODO: Add sampling from vocabulary file
 
         self.blue = set()
         self.red = set()
         self.assassin = set()
         self.neutral = set()
 
-        # Also get indices with respect to vocabulary
+        # Get the initial powerset indices
+        powset_blue = self.powerset(self.blue)
+        powset_blue.pop(0)  # Remove the empty set
+        powset_red = self.powerset(self.red)
+        powset_red.pop(0)   # Remove the empty set
 
-        self.board_indices = list()
+        assert len(powset_blue) == 2 ** self.num_blue - 1
+        assert len(powset_red) == 2 ** self.num_red - 1
+
+        combined_powset = powset_blue + powset_red
+        self.powerset_indices = {i: subset for i, subset in enumerate(combined_powset)}
+
         self.allowed_clue_words = self.vocab - (self.blue.union(self.red, self.assassin, self.neutral))
 
     def _init_guessed_words(self):
@@ -66,7 +85,7 @@ class CodenamesBoard:
 
         """ Generates the starting board """
 
-        self._sample_words_from_vocab()
+        self._prepare_wordsets()
         self._init_guessed_words()
         self._init_last_guess()
 
@@ -92,6 +111,21 @@ class CodenamesBoard:
         self.red = board.red
         self.assassin = board.assassin
         self.neutral = board.neutral
+
+    def get_powerset_indices(self, team):
+
+        """ Returns the indices of the possible subsets of remaining words"""
+
+        def get_indices(x):
+            return self.powerset_indices[x]
+
+        if team == 1:
+            powset = self.powerset(self.blue)
+        else:
+            powset = self.powerset(self.red)
+
+        powset.pop(0)
+        return np.array(list(map(get_indices, powset)))
 
     def guess(self, team, guessed_word, is_last_guess=False):
 
