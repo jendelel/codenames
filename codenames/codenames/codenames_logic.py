@@ -17,38 +17,51 @@ import numpy as np
 
 class CodenamesBoard:
 
-    def __init__(self, num_blue, num_red, num_assassin=0, num_neutral=0):
+    def __init__(self, num_blue, num_red, num_assassin=0, num_neutral=0, vocab=None):
 
         self.num_blue = num_blue
         self.num_red = num_red
         self.num_assassin = num_assassin
         self.num_neutral = num_neutral
 
-        self._generate_dicts()
+        self._generate_dicts(vocab=vocab)
 
-    def _generate_dicts(self):
+    def _generate_dicts(self, vocab=None):
 
-        """ Generate the vocab to index and index to vocab dict"""
+        """ Generate the word to index and index to word dict"""
 
-        self.vocab = set()
+        if vocab is not None:
+            self.vocab = vocab
+            self.word_to_index = {word: i for i, word in enumerate(vocab)}
+            self.index_to_word = {i: word for i, word in enumerate(vocab)}
 
-        pass
+        else:
+            self.vocab = set()
+            self.word_to_index = set()
+            self.index_to_word = set()
+
+            pass
 
     @staticmethod
     def powerset(words):
         s = list(words)
         return list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
 
-    def _prepare_wordsets(self):
+    def _prepare_wordsets(self, blue=set(), red=set(), assassin=set(), neutral=set()):
 
-        """ Samples words from the vocabulary"""
+        """ Samples words from the vocabulary, gets powerset indices dictionary"""
 
         # TODO: Add sampling from vocabulary file
 
-        self.blue = set()
-        self.red = set()
-        self.assassin = set()
-        self.neutral = set()
+        self.blue = blue
+        self.red = red
+        self.assassin = assassin
+        self.neutral = neutral
+
+        assert len(self.blue) == self.num_blue
+        assert len(self.red) == self.num_red
+        assert len(self.assassin) == self.num_assassin
+        assert len(self.neutral) == self.num_neutral
 
         # Get the initial powerset indices
         powset_blue = self.powerset(self.blue)
@@ -60,9 +73,9 @@ class CodenamesBoard:
         assert len(powset_red) == 2 ** self.num_red - 1
 
         combined_powset = powset_blue + powset_red
-        self.powerset_indices = {i: subset for i, subset in enumerate(combined_powset)}
+        self.powerset_indices = {subset: i for i, subset in enumerate(combined_powset)}
 
-        self.allowed_clue_words = self.vocab - (self.blue.union(self.red, self.assassin, self.neutral))
+        self.allowed_clue_words = self.vocab.difference(self.blue.union(self.red, self.assassin, self.neutral))
 
     def _init_guessed_words(self):
 
@@ -81,11 +94,11 @@ class CodenamesBoard:
 
         self.last_guess = {1: '', -1: ''}
 
-    def reset(self):
+    def reset(self, blue=set(), red=set(), assassin=set(), neutral=set()):
 
         """ Generates the starting board """
 
-        self._prepare_wordsets()
+        self._prepare_wordsets(blue=blue, red=red, assassin=assassin, neutral=neutral)
         self._init_guessed_words()
         self._init_last_guess()
 
