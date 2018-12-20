@@ -1,32 +1,25 @@
 from __future__ import unicode_literals, print_function, division
 from io import open
 import unicodedata
-import string
 import re
 import random
 
 import torch
-import torch.nn as nn
-from torch import optim
-import torch.nn.functional as F
-
-import re
-import unicodedata
-import random
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BOARD_SIZE = 25
 TEAM_IDX = {
-    'BLUE' : 0,
-    'RED' : 1,
-    'WHITE' : 2,
-    'BLACK' : 3,
+    'BLUE': 0,
+    'RED': 1,
+    'WHITE': 2,
+    'BLACK': 3,
 }
 SPECIAL_TEAM = 4
 SOS_TOKEN = '<SOS>'
 EOS_TOKEN = '<EOS>'
+
 
 class Vocab:
     word_to_idx = None
@@ -48,15 +41,13 @@ class Vocab:
     # http://stackoverflow.com/a/518232/2809427
     @staticmethod
     def _unicodeToAscii(s):
-        return ''.join(
-            c for c in unicodedata.normalize('NFD', s)
-            if unicodedata.category(c) != 'Mn'
-        )
+        return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
     @staticmethod
     def _normalize_word(word):
         word = Vocab._unicodeToAscii(word.lower().strip())
-        s = re.sub(r"[^a-zA-Z]+", r"", s)
+        word = re.sub(r"[^a-zA-Z]+", r"", word)
+        return word
 
     @staticmethod
     def _load_data(cards_file):
@@ -64,9 +55,10 @@ class Vocab:
             return [Vocab._normalize_word(line) for line in f]
 
     @staticmethod
-    def load_from_file(fname)
+    def load_from_file(fname):
         words = Vocab._load_data(fname)
         return Vocab(words)
+
 
 def generate_board(vocab):
     words = random.sample(vocab.idx_to_word[2:], BOARD_SIZE)  # Sample without replacement
@@ -76,21 +68,21 @@ def generate_board(vocab):
     # Assign cards to teams:
     # BLUE: 0; RED: 1; WHITE: 2; BLACK: 3
     while True:
-        team_idx = np.random.randint(low=0, high=3, size=len(words), np.int64)
+        team_idx = np.random.randint(low=0, high=3, size=len(words), dtype=np.int64)
         team_idx[black_index] = TEAM_IDX['BLACK']
         unique_idx = np.unique(team_idx)
         assert len(unique_idx) <= len(TEAM_IDX)
         # Make sure that all teams are represented. White does not have to be represented.
-        if len(unique_idx) == 3 or (len(unique_idx) ==2 and TEAM_IDX['WHITE'] not in unique_idx):
+        if len(unique_idx) == 3 or (len(unique_idx) == 2 and TEAM_IDX['WHITE'] not in unique_idx):
             break
     yield zip(words, team_idx)
+
 
 def tensors_from_board(vocab, pairs):
     pairs = [(vocab.word_to_idx[word], team) for (word, team) in pairs]
     pairs.append((vocab.word_to_idx['EOS'], SPECIAL_TEAM))
     words_idx, teams_idx = zip(*pairs)
-    
+
     words_tensor = torch.tensor(words_idx, dtype=torch.long, device=device).view(-1, 1)
     teams_tensor = torch.tensor(teams_idx, dtype=torch.long, device=device).view(-1, 1)
     return torch.cat([words_tensor, teams_tensor], 1)
-    

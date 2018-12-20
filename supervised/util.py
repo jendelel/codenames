@@ -3,8 +3,7 @@ import math
 
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
-import matplotlib.ticker as ticker
-import numpy as np
+import matplotlib.ticker as ticker  # noqa: E402
 
 
 def asMinutes(s):

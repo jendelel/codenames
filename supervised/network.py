@@ -1,23 +1,19 @@
 # This file is based on https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 
 from __future__ import unicode_literals, print_function, division
-from io import open
-import unicodedata
-import string
-import re
-import random
 
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-ATTN_MAX_LENGTH = 25 # Maximum number of cards on the board.
+ATTN_MAX_LENGTH = 25  # Maximum number of cards on the board.
 
 # TODO: Find out how to load pretrained embeddings (possibly detach them from training)
 
+
 class EncoderRNN(nn.Module):
+
     def __init__(self, input_size, hidden_size):
         super(EncoderRNN, self).__init__()
         self.hidden_size = hidden_size
@@ -34,7 +30,9 @@ class EncoderRNN(nn.Module):
     def initHidden(self):
         return torch.zeros(1, 1, self.hidden_size, device=device)
 
+
 class ClueClassificator(nn.Module):
+
     def __init__(self, hidden_size, clue_vocab_size):
         super(ClueClassificator, self).__init__()
 
@@ -44,8 +42,10 @@ class ClueClassificator(nn.Module):
         output = self.linear(input)
         return F.softmax(output)
 
+
 class AttnDecoderRNN(nn.Module):
-    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
+
+    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=ATTN_MAX_LENGTH):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -63,10 +63,8 @@ class AttnDecoderRNN(nn.Module):
         embedded = self.embedding(input).view(1, 1, -1)
         embedded = self.dropout(embedded)
 
-        attn_weights = F.softmax(
-            self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0),
-                                 encoder_outputs.unsqueeze(0))
+        attn_weights = F.softmax(self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
+        attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoder_outputs.unsqueeze(0))
 
         output = torch.cat((embedded[0], attn_applied[0]), 1)
         output = self.attn_combine(output).unsqueeze(0)

@@ -1,22 +1,21 @@
 from __future__ import unicode_literals, print_function, division
-from io import open
-import unicodedata
-import string
-import re
 import random
 
 import torch
 import torch.nn as nn
 from torch import optim
-import torch.nn.functional as F
 
-import argparse 
+import argparse
+import time
 import network
 import data
+import util
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class PlayerTrainer:
+
     def __init__(self, hidden_size, board_vocab_size, clues_vocab_size):
         self.decoder = network.AttnDecoderRNN(hidden_size * 2, board_vocab_size).to(device)
         self.clue_scaler = nn.Linear(clues_vocab_size, hidden_size).to(device)
@@ -35,28 +34,39 @@ class PlayerTrainer:
             decoder_input = topi.squeeze().detach()  # detach from history as input
 
             loss += criterion(decoder_output, intended_output[di])
-            if decoder_input.item() == EOS_token or not team_words[decoder_input.item()]:
+            if decoder_input.item() == data.EOS_token or not team_words[decoder_input.item()]:
                 break
-        
+
         return loss
 
-    def parameters():
+    def parameters(self):
         return self.decoder.parameters() + self.clue_scaler.parameters()
-        
-def train(board_input, board_vocab, encoder, clue_predictor, decoder, player_trainer, encoder_opt, decoder_opt, player_opt, criterion, team_words, att_max_len = network.ATTN_MAX_LENGTH):
+
+
+def train(board_input,
+          board_vocab,
+          encoder,
+          clue_predictor,
+          decoder,
+          player_trainer,
+          encoder_opt,
+          decoder_opt,
+          player_opt,
+          criterion,
+          team_words,
+          att_max_len=network.ATTN_MAX_LENGTH):
     encoder_hidden = encoder.initHidden()
     encoder_opt.zero_grad()
     decoder_opt.zero_grad()
     player_opt.zero_grad()
 
     input_length = board_input.size(0)
-    encoder_outputs = torch.zeros(att_max_length, encoder.hidden_size, device=device)
+    encoder_outputs = torch.zeros(att_max_len, encoder.hidden_size, device=device)
 
     loss = 0
 
     for ei in range(input_length):
-        encoder_output, encoder_hidden = encoder(
-            input_tensor[ei], encoder_hidden)
+        encoder_output, encoder_hidden = encoder(board_input[ei], encoder_hidden)
         encoder_outputs[ei] = encoder_output[0, 0]
 
     clue_logits = clue_predictor(encoder_hidden)
@@ -66,15 +76,13 @@ def train(board_input, board_vocab, encoder, clue_predictor, decoder, player_tra
     decoder_hidden = encoder_hidden
 
     intended_output = []
-    for di in range(target_length):
-        decoder_output, decoder_hidden, decoder_attention_unused = decoder(
-            decoder_input, decoder_hidden, encoder_outputs)
+    for di in range(9):  # At most 9 cards of the same color.
+        decoder_output, decoder_hidden, decoder_attention_unused = decoder(decoder_input, decoder_hidden, encoder_outputs)
         topv, topi = decoder_output.topk(1)
         decoder_input = topi.squeeze().detach()  # detach from history as input
         intended_output.append(decoder_input.item())
 
-        loss += criterion(decoder_output, target_tensor[di])
-        if decoder_input.item() == EOS_token:
+        if decoder_input.item() == data.EOS_token:
             break
 
     intended_output_idx = [board_vocab.word_to_idx[word] for word in intended_output]
@@ -87,9 +95,15 @@ def train(board_input, board_vocab, encoder, clue_predictor, decoder, player_tra
     player_opt.step()
 
 
-
-
-def trainIters(encoder, clue_predictor, decoder, player_trainer, board_vocab, n_iters, print_every=1000, plot_every=100, learning_rate=0.001):
+def trainIters(encoder,
+               clue_predictor,
+               decoder,
+               player_trainer,
+               board_vocab,
+               n_iters,
+               print_every=1000,
+               plot_every=100,
+               learning_rate=0.001):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
@@ -104,21 +118,21 @@ def trainIters(encoder, clue_predictor, decoder, player_trainer, board_vocab, n_
 
     for iter in range(1, n_iters + 1):
         board = data.generate_board(board_vocab)
-        training_input = tensors_from_board(board_vocab, board)
+        training_input = data.tensors_from_board(board_vocab, board)
 
         # Choose team
         team = data.TEAM_IDX['BLUE'] if random.random() < 0.5 else data.TEAM_IDX['RED']
         team_words = [team == t for (_, t) in board]
 
-        loss = train(training_input, board_vocab, encoder, clue_predictor, decoder, player_trainer, encoder_optimizer, decoder_optimizer, player_optimizer, criterion, team_words)
+        loss = train(training_input, board_vocab, encoder, clue_predictor, decoder, player_trainer, encoder_optimizer, decoder_optimizer,
+                     player_optimizer, criterion, team_words)
         print_loss_total += loss
         plot_loss_total += loss
 
         if iter % print_every == 0:
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            print('%s (%d %d%%) %.4f' % (util.timeSince(start, iter / n_iters),
-                                         iter, iter / n_iters * 100, print_loss_avg))
+            print('%s (%d %d%%) %.4f' % (util.timeSince(start, iter / n_iters), iter, iter / n_iters * 100, print_loss_avg))
 
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
@@ -126,6 +140,7 @@ def trainIters(encoder, clue_predictor, decoder, player_trainer, board_vocab, n_
             plot_loss_total = 0
 
     util.showPlot(plot_losses)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -140,7 +155,7 @@ def main():
 
     encoder = network.EncoderRNN(len(board_vocab), hidden_size).to(device).to(device)
     clue_predictor = network.ClueClassificator(hidden_size, len(clue_vocab)).to(device)
-    attn_decoder = AttnDecoderRNN(hidden_size, len(board_vocab), dropout_p=0.1).to(device)
+    attn_decoder = network.AttnDecoderRNN(hidden_size, len(board_vocab), dropout_p=0.1).to(device)
     player_trainer = PlayerTrainer(hidden_size, len(board_vocab), len(clue_vocab)).to(device)
 
     trainIters(encoder, clue_predictor, attn_decoder, player_trainer, board_vocab, 75000, print_every=5000)
