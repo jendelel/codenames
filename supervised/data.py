@@ -9,13 +9,7 @@ import numpy as np
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 BOARD_SIZE = 25
-TEAM_IDX = {
-    'BLUE': 0,
-    'RED': 1,
-    'WHITE': 2,
-    'BLACK': 3,
-    'PADDING_TEAM': 4
-}
+TEAM_IDX = {'BLUE': 0, 'RED': 1, 'WHITE': 2, 'BLACK': 3, 'PADDING_TEAM': 4}
 SOS_TOKEN = '<SOS>'
 EOS_TOKEN = '<EOS>'
 
@@ -59,7 +53,7 @@ class Vocab:
 
 
 def generate_board(vocab):
-    num_words = random.randint(3, BOARD_SIZE) # At least 3 cards. Each for one team except for white.
+    num_words = random.randint(3, BOARD_SIZE)  # At least 3 cards. Each for one team except for white.
     words = random.sample(vocab.idx_to_word[2:], num_words)  # Sample without replacement (without EOS/SOS)
     # Choose a black word
     black_index = random.randrange(0, len(words))
