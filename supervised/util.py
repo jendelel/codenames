@@ -1,26 +1,25 @@
 import time
-import math
 
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 import matplotlib.ticker as ticker  # noqa: E402
 
 
-def asMinutes(s):
-    m = math.floor(s / 60)
+def as_minutes(s):
+    m = s // 60
     s -= m * 60
     return '%dm %ds' % (m, s)
 
 
-def timeSince(since, percent):
+def time_since(since, percent):
     now = time.time()
     s = now - since
-    es = s / (percent)
+    es = s / percent
     rs = es - s
-    return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
+    return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
 
 
-def showPlot(points):
+def show_plot(points):
     plt.figure()
     fig, ax = plt.subplots()
     # this locator puts ticks at regular intervals

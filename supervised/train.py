@@ -20,7 +20,7 @@ class PlayerTrainer:
         self.decoder = network.AttnDecoderRNN(hidden_size * 2, board_vocab_size).to(device)
         self.clue_scaler = nn.Linear(clues_vocab_size, hidden_size).to(device)
 
-    def train_step(self, encoder_hidden, encoder_outputs, clue_logits, intended_output, criterion, team_words):
+    def train_step(self, encoder_hidden, encoder_outputs, clue_logits, intended_output, criterion, team_word_mask):
         intended_length = intended_output.size(0)
         loss = 0
 
@@ -34,7 +34,7 @@ class PlayerTrainer:
             decoder_input = topi.squeeze().detach()  # detach from history as input
 
             loss += criterion(decoder_output, intended_output[di])
-            if decoder_input.item() == data.EOS_token or not team_words[decoder_input.item()]:
+            if decoder_input.item() == data.EOS_TOKEN or not team_word_mask[decoder_input.item()]:
                 break
 
         return loss
@@ -53,9 +53,9 @@ def train(board_input,
           decoder_opt,
           player_opt,
           criterion,
-          team_words,
+          team_word_mask,
           att_max_len=network.ATTN_MAX_LENGTH):
-    encoder_hidden = encoder.initHidden()
+    encoder_hidden = encoder.init_hidden()
     encoder_opt.zero_grad()
     decoder_opt.zero_grad()
     player_opt.zero_grad()
@@ -71,7 +71,7 @@ def train(board_input,
 
     clue_logits = clue_predictor(encoder_hidden)
 
-    decoder_input = torch.tensor([[data.SOS_token]], device=device)
+    decoder_input = torch.tensor([[data.SOS_TOKEN]], device=device)
 
     decoder_hidden = encoder_hidden
 
@@ -82,11 +82,11 @@ def train(board_input,
         decoder_input = topi.squeeze().detach()  # detach from history as input
         intended_output.append(decoder_input.item())
 
-        if decoder_input.item() == data.EOS_token:
+        if decoder_input.item() == data.EOS_TOKEN:
             break
 
     intended_output_idx = [board_vocab.word_to_idx[word] for word in intended_output]
-    loss += player_trainer.train_step(encoder_hidden, encoder_outputs, clue_logits, intended_output_idx, criterion, team_words)
+    loss += player_trainer.train_step(encoder_hidden, encoder_outputs, clue_logits, intended_output_idx, criterion, team_word_mask)
 
     loss.backward()
 
@@ -95,7 +95,7 @@ def train(board_input,
     player_opt.step()
 
 
-def trainIters(encoder,
+def train_iters(encoder,
                clue_predictor,
                decoder,
                player_trainer,
@@ -122,24 +122,24 @@ def trainIters(encoder,
 
         # Choose team
         team = data.TEAM_IDX['BLUE'] if random.random() < 0.5 else data.TEAM_IDX['RED']
-        team_words = [team == t for (_, t) in board]
+        team_word_mask = [team == t for (_, t) in board]
 
         loss = train(training_input, board_vocab, encoder, clue_predictor, decoder, player_trainer, encoder_optimizer, decoder_optimizer,
-                     player_optimizer, criterion, team_words)
+                     player_optimizer, criterion, team_word_mask)
         print_loss_total += loss
         plot_loss_total += loss
 
         if iter % print_every == 0:
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            print('%s (%d %d%%) %.4f' % (util.timeSince(start, iter / n_iters), iter, iter / n_iters * 100, print_loss_avg))
+            print('%s (%d %d%%) %.4f' % (util.time_since(start, iter / n_iters), iter, iter / n_iters * 100, print_loss_avg))
 
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
 
-    util.showPlot(plot_losses)
+    util.show_plot(plot_losses)
 
 
 def main():
@@ -155,7 +155,7 @@ def main():
 
     encoder = network.EncoderRNN(len(board_vocab), hidden_size).to(device).to(device)
     clue_predictor = network.ClueClassificator(hidden_size, len(clue_vocab)).to(device)
-    attn_decoder = network.AttnDecoderRNN(hidden_size, len(board_vocab), dropout_p=0.1).to(device)
+    attn_decoder = network.AttnDecoderRNN(hidden_size * 2, len(board_vocab), dropout_p=0.1).to(device)
     player_trainer = PlayerTrainer(hidden_size, len(board_vocab), len(clue_vocab)).to(device)
 
-    trainIters(encoder, clue_predictor, attn_decoder, player_trainer, board_vocab, 75000, print_every=5000)
+    train_iters(encoder, clue_predictor, attn_decoder, player_trainer, board_vocab, 75000, print_every=5000)
