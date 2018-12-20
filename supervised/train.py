@@ -47,6 +47,7 @@ def train(board_input,
           board_vocab,
           encoder,
           clue_predictor,
+          clue_scaler,
           decoder,
           player_trainer,
           encoder_opt,
@@ -73,7 +74,8 @@ def train(board_input,
 
     decoder_input = torch.tensor([[data.SOS_TOKEN]], device=device)
 
-    decoder_hidden = encoder_hidden
+    clue_scaled = clue_scaler(clue_logits)
+    decoder_hidden = torch.cat([encoder_hidden, clue_scaled], 1)
 
     intended_output = []
     for di in range(9):  # At most 9 cards of the same color.
@@ -96,21 +98,22 @@ def train(board_input,
 
 
 def train_iters(encoder,
-               clue_predictor,
-               decoder,
-               player_trainer,
-               board_vocab,
-               n_iters,
-               print_every=1000,
-               plot_every=100,
-               learning_rate=0.001):
+                clue_predictor,
+                clue_scaler,
+                decoder,
+                player_trainer,
+                board_vocab,
+                n_iters,
+                print_every=1000,
+                plot_every=100,
+                learning_rate=0.001):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
     plot_loss_total = 0  # Reset every plot_every
 
     encoder_optimizer = optim.adam(encoder.parameters(), lr=learning_rate)
-    decoder_optimizer = optim.adam(decoder.parameters() + clue_predictor.parameters(), lr=learning_rate)
+    decoder_optimizer = optim.adam(decoder.parameters() + clue_predictor.parameters() + clue_scaler.parameters(), lr=learning_rate)
     player_optimizer = optim.adam(player_trainer.parameters(), lr=learning_rate)
 
     data.generate_board(board_vocab)
@@ -124,8 +127,8 @@ def train_iters(encoder,
         team = data.TEAM_IDX['BLUE'] if random.random() < 0.5 else data.TEAM_IDX['RED']
         team_word_mask = [team == t for (_, t) in board]
 
-        loss = train(training_input, board_vocab, encoder, clue_predictor, decoder, player_trainer, encoder_optimizer, decoder_optimizer,
-                     player_optimizer, criterion, team_word_mask)
+        loss = train(training_input, board_vocab, encoder, clue_predictor, clue_scaler, decoder, player_trainer, encoder_optimizer,
+                     decoder_optimizer, player_optimizer, criterion, team_word_mask)
         print_loss_total += loss
         plot_loss_total += loss
 
@@ -153,9 +156,10 @@ def main():
     board_vocab = data.Vocab.load_from_file(args.board_words)
     clue_vocab = data.Vocab.load_from_file(args.clue_words)
 
-    encoder = network.EncoderRNN(len(board_vocab), hidden_size).to(device).to(device)
+    encoder = network.EncoderRNN(len(board_vocab), hidden_size).to(device)
+    clue_scaler = nn.Linear(len(clue_vocab), hidden_size).to(device)
     clue_predictor = network.ClueClassificator(hidden_size, len(clue_vocab)).to(device)
     attn_decoder = network.AttnDecoderRNN(hidden_size * 2, len(board_vocab), dropout_p=0.1).to(device)
     player_trainer = PlayerTrainer(hidden_size, len(board_vocab), len(clue_vocab)).to(device)
 
-    train_iters(encoder, clue_predictor, attn_decoder, player_trainer, board_vocab, 75000, print_every=5000)
+    train_iters(encoder, clue_predictor, clue_scaler, attn_decoder, player_trainer, board_vocab, 75000, print_every=5000)
