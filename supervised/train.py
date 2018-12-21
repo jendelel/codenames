@@ -87,7 +87,8 @@ def train(board_input,
         if decoder_input.item() == data.EOS_TOKEN:
             break
 
-    intended_output_idx = [board_vocab.word_to_idx[word] for word in intended_output]
+    intended_output_idx = torch.tensor([board_vocab.word_to_idx[word] for word in intended_output], dtype=torch.long, device=device).view(
+        len(intended_output), 1)
     loss += player_trainer.train_step(encoder_hidden, encoder_outputs, clue_logits, intended_output_idx, criterion, team_word_mask)
 
     loss.backward()
@@ -95,6 +96,8 @@ def train(board_input,
     encoder_opt.step()
     decoder_opt.step()
     player_opt.step()
+
+    return loss.item() / len(intended_output)
 
 
 def train_iters(encoder,
